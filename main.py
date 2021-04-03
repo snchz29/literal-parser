@@ -1,75 +1,79 @@
-import re
 import sys
 from collections import deque
+from typing import List, Iterable, Dict, Deque, Callable, Set
 
 
-class LiteralParser:
-    def __init__(self, filename: str):
-        self.__filename = filename
-
-    def _read_file(self) -> list:
-        with open(self.__filename, 'r') as f:
-            lines = f.readlines()
-        return lines
-
-    def __filter(self, dict_: dict) -> dict:
-        result = dict_.copy()
-        for key, val in dict_.items():
-            result.update({key: set(val)})
-            if len(val) < 2:
-                result.pop(key)
-        return result
-
-    def _find_literals(self, line: str) -> list:
-        pass
-
-    def find(self) -> dict:
-        all_results = dict()
-        line_number = 0
-        for line in self._read_file():
-            for literal in self._find_literals(line):
-                all_results.setdefault(literal, []).append(line_number)
-            line_number += 1
-        return self.__filter(all_results)
+def select_non_unique_literals(fn: Callable) -> Callable:
+    def wrapper(lines: Iterable[str]) -> Dict[str, Set[int]]:
+        return {key: set(val) for key, val in fn(lines).items() if len(val) > 1}
+    return wrapper
 
 
-class RegEXParser(LiteralParser):
-    def _find_literals(self, line: str) -> list:
-        return [lit[1] for lit in re.findall(r"([\"'])(.*?)\1", line)]
+class LiteralParser():
+    """
+    Pulls all string literals except
+    multiline literals, f-strings, and comment literals.
+    """
 
-
-class DequeParser(LiteralParser):
-    def _find_literals(self, line: str) -> list:
+    def __find_literals(self, line: str) -> List[str]:
         queue = deque()
         index = 0
         length = len(line)
         while index < length:
+            if line[index] == "#":  # beginning of one-line comment
+                return self.split_line(line, queue)
             if line[index] == "'" or line[index] == '"':
                 quote = line[index]
                 index += 1
                 queue.append(index)
-                while index < length and (line[index] != quote or index > 0 and line[index-1] == "\\"):
+                # Iterating over the line until a closing unescaped quote is found
+                while index < length and (line[index] != quote or index > 0 and line[index - 1] == "\\"):
                     index += 1
-                queue.append(index)
+                # Check if the found symbol is quote, not EOL
+                if index < length:
+                    queue.append(index)
             index += 1
-        return split_line(line, queue)
+        if len(queue) % 2:
+            raise SyntaxError(f"There is no closing quote symbol for quote at index {queue.pop()} "
+                              f"in line: \n{line}")
+        return self.split_line(line, queue)
+
+    def find(self, lines: Iterable[str]) -> Dict[str, List[int]]:
+        all_results = dict()
+        line_number = 0
+        for line in lines:
+            for literal in self.__find_literals(line):
+                all_results.setdefault(literal, []).append(line_number)
+            line_number += 1
+        return all_results
+
+    @staticmethod
+    def split_line(line: str, queue: Deque[int]) -> List[str]:
+        result = []
+        while len(queue):
+            b_index = queue.popleft()
+            e_index = queue.popleft()
+            result.append(line[b_index:e_index])
+        return result
 
 
-def split_line(line:str, queue:deque)->list:
-    result = []
-    while len(queue):
-        b_index = queue.popleft()
-        e_index = queue.popleft()
-        result.append(line[b_index:e_index])
-    return result
+def main():
+    parser = LiteralParser()
+    parser.find = select_non_unique_literals(parser.find)
+    try:
+        with open(sys.argv[1]) as f:
+            lines = f.readlines()
+    except IOError as e:
+        print(e, file=sys.stderr)
+    else:
+        results = parser.find(lines)
+        print(*[f"Lines with '{key}': {', '.join(map(str, val))}" for key, val in results.items()], sep="\n")
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Fatal error: No input files")
-    elif len(sys.argv) > 2:
-        print("Warning: Too much input files. Only first one will be parsed.")
-
-    explorer = DequeParser(sys.argv[1])
-    results = explorer.find()
-    print(*[f"Lines with '{key}': {', '.join(map(str, val))}" for key, val in results.items()], sep="\n")
+        print("Fatal error: No input files", file=sys.stderr)
+    else:
+        if len(sys.argv) > 2:
+            print("Warning: Too much input files. Only first one will be parsed.", file=sys.stderr)
+        main()
