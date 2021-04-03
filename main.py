@@ -3,7 +3,7 @@ import sys
 from collections import deque
 
 
-class FindLiterals:
+class LiteralParser:
     def __init__(self, filename: str):
         self.__filename = filename
 
@@ -33,12 +33,12 @@ class FindLiterals:
         return self.__filter(all_results)
 
 
-class FindLiteralsWithRegEX(FindLiterals):
+class RegEXParser(LiteralParser):
     def _find_literals(self, line: str) -> list:
         return [lit[1] for lit in re.findall(r"([\"'])(.*?)\1", line)]
 
 
-class FindLiteralsWithDeque(FindLiterals):
+class DequeParser(LiteralParser):
     def _find_literals(self, line: str) -> list:
         queue = deque()
         line_iter = iter(line)
@@ -59,7 +59,7 @@ class FindLiteralsWithDeque(FindLiterals):
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
-        explorer = FindLiteralsWithDeque(sys.argv[1])
+        explorer = DequeParser(sys.argv[1])
         results = explorer.find()
         print(*[f"Lines with '{key}': {', '.join(map(str, val))}" for key, val in results.items()], sep="\n")
     else:
