@@ -9,8 +9,8 @@ class LiteralParser:
 
     def _read_file(self) -> list:
         with open(self.__filename, 'r') as f:
-            res = f.read()
-        return res.split("\n")
+            lines = f.readlines()
+        return lines
 
     def __filter(self, dict_: dict) -> dict:
         result = dict_.copy()
@@ -41,26 +41,35 @@ class RegEXParser(LiteralParser):
 class DequeParser(LiteralParser):
     def _find_literals(self, line: str) -> list:
         queue = deque()
-        line_iter = iter(line)
-        result = []
-        char = next(line_iter, None)
-        while char:
-            if char == "'" or char == '"':
-                quote = char
-                char = next(line_iter, None)
-                while char and char != quote:
-                    queue.append(char)
-                    char = next(line_iter, None)
-                result.append("".join(queue))
-                queue.clear()
-            char = next(line_iter, None)
-        return result
+        index = 0
+        length = len(line)
+        while index < length:
+            if line[index] == "'" or line[index] == '"':
+                quote = line[index]
+                index += 1
+                queue.append(index)
+                while index < length and (line[index] != quote or index > 0 and line[index-1] == "\\"):
+                    index += 1
+                queue.append(index)
+            index += 1
+        return split_line(line, queue)
+
+
+def split_line(line:str, queue:deque)->list:
+    result = []
+    while len(queue):
+        b_index = queue.popleft()
+        e_index = queue.popleft()
+        result.append(line[b_index:e_index])
+    return result
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 2:
-        explorer = DequeParser(sys.argv[1])
-        results = explorer.find()
-        print(*[f"Lines with '{key}': {', '.join(map(str, val))}" for key, val in results.items()], sep="\n")
-    else:
+    if len(sys.argv) < 2:
         print("Fatal error: No input files")
+    elif len(sys.argv) > 2:
+        print("Warning: Too much input files. Only first one will be parsed.")
+
+    explorer = DequeParser(sys.argv[1])
+    results = explorer.find()
+    print(*[f"Lines with '{key}': {', '.join(map(str, val))}" for key, val in results.items()], sep="\n")
