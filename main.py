@@ -27,7 +27,9 @@ class LiteralParser():
                 index += 1
                 queue.append(index)
                 # Iterating over the line until a closing unescaped quote is found
-                while index < length and (line[index] != quote or index > 0 and line[index - 1] == "\\"):
+                while index < length and line[index] != quote:
+                    if line[index] == "\\":
+                        index += 1
                     index += 1
                 # Check if the found symbol is quote, not EOL
                 if index < length:
@@ -38,10 +40,10 @@ class LiteralParser():
                               f"in line: \n{line}")
         return self.split_line(line, queue)
 
-    def find(self, lines: Iterable[str]) -> Dict[str, List[int]]:
+    def find(self, file: Iterable[str]) -> Dict[str, List[int]]:
         all_results = dict()
         line_number = 0
-        for line in lines:
+        for line in file:
             for literal in self.__find_literals(line):
                 all_results.setdefault(literal, []).append(line_number)
             line_number += 1
@@ -59,15 +61,13 @@ class LiteralParser():
 
 def main():
     parser = LiteralParser()
-    parser.find = select_non_unique_literals(parser.find)
+    # parser.find = select_non_unique_literals(parser.find)
     try:
         with open(sys.argv[1]) as f:
-            lines = f.readlines()
+            results = parser.find(f)
+            print(*[f"Lines with '{key}': {', '.join(map(str, val))}" for key, val in results.items()], sep="\n")
     except IOError as e:
         print(e, file=sys.stderr)
-    else:
-        results = parser.find(lines)
-        print(*[f"Lines with '{key}': {', '.join(map(str, val))}" for key, val in results.items()], sep="\n")
 
 
 if __name__ == '__main__':
