@@ -61,7 +61,7 @@ class LiteralParser():
 
 def main():
     parser = LiteralParser()
-    # parser.find = select_non_unique_literals(parser.find)
+    parser.find = select_non_unique_literals(parser.find)
     try:
         with open(sys.argv[1]) as f:
             results = parser.find(f)
