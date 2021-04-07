@@ -1,3 +1,4 @@
+import re
 import sys
 from collections import deque
 from typing import List, Iterable, Dict, Deque, Callable, Set
@@ -15,7 +16,7 @@ class LiteralParser():
     multiline literals, f-strings, and comment literals.
     """
 
-    def __find_literals(self, line: str) -> List[str]:
+    def _find_literals(self, line: str) -> List[str]:
         queue = deque()
         index = 0
         length = len(line)
@@ -44,7 +45,7 @@ class LiteralParser():
         all_results = dict()
         line_number = 0
         for line in file:
-            for literal in self.__find_literals(line):
+            for literal in self._find_literals(line):
                 all_results.setdefault(literal, []).append(line_number)
             line_number += 1
         return all_results
@@ -58,10 +59,15 @@ class LiteralParser():
             result.append(line[b_index:e_index])
         return result
 
+class RegExParser(LiteralParser):
+    def _find_literals(self, line: str) -> List[str]:
+        # select group 2 (literal) if group 3 (comment) is empty
+        #                                      |  1  ||                2                 |   | 3 |
+        return [lit[1] for lit in re.findall(r"(['\"])((?:(?:[^\\])*?(?:\\.)*(?:\\\\)*)*?)\1|(#.*)", line) if len(lit[2])==0]
 
 def main():
     parser = LiteralParser()
-    # parser.find = select_non_unique_literals(parser.find)
+    parser.find = select_non_unique_literals(parser.find)
     try:
         with open(sys.argv[1]) as f:
             results = parser.find(f)
