@@ -16,7 +16,7 @@ Where `[filename]` is the path to the file for analysis.
 
 This implementation is based on the use of a queue. 
 
-Class LiteralParser processes a list of strings and returns a dictionary in which the key is an all literals, and the value is a list of line numbers.
+Class LiteralParser processes a list of strings and returns a dictionary in which the keys are an all literals, and the values are a lists of line numbers.
 
 For each line, the index of each quote is enqueued.
 Quotes in comments are ignored.
