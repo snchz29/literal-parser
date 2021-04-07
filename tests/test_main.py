@@ -15,7 +15,7 @@ class TestFind(TestParser):
             self.assertDictEqual(self.parser_queue.find(f), {
                 'id': [0, 5, 5],
                 'value': [0, 6],
-                'Hello world!': [2],
+                "Hello' world!": [2],
             })
 
     def test_queue_2(self):
@@ -28,15 +28,15 @@ class TestFind(TestParser):
 
     def test_regex_1(self):
         with open("res/test_1.py", "r") as f:
-            self.assertDictEqual(self.parser_queue.find(f), {
+            self.assertDictEqual(self.parser_regex.find(f), {
                 'id': [0, 5, 5],
                 'value': [0, 6],
-                'Hello world!': [2],
+                "Hello' world!": [2],
             })
 
     def test_regex_2(self):
         with open("res/test_2.py", "r") as f:
-            self.assertDictEqual(self.parser_queue.find(f), {
+            self.assertDictEqual(self.parser_regex.find(f), {
                 'abc \\"\\"': [0, 2],
                 'def \\\\': [0, 2],
                 'asdfasdf': [4],
